@@ -195,11 +195,39 @@ void parseOptions(int argc, char* argv[])
 void printHelp(po::options_description& o)
 {
 	cout << NSOLV << " [options] <input>" << endl <<
-			"<input> is a valid SMTLIBv2 file." << endl << endl <<
+			"<input> is a valid (.smt2) SMTLIBv2 file." << endl << endl <<
 
-			NSOLV << " allows several SMTLIBv2 solvers to be invoked simultaneously."
-			" Command line parameters for each solver may be specified in a configuration file. TODO " << endl <<
-			o ;
-	cout << endl;
+			"NSolv allows several SMTLIBv2 solvers to be invoked simultaneously (each as a separate process)." << endl <<
+			"Multiple calls to --solver will create each solver. It also possible (and recommended) to specify this " << endl <<
+			"in a configuration file. Command line parameters for each solver may also be specified in " << endl <<
+			"the configuration file but NOT on the command line of NSolv." << endl << endl <<
+
+			"CONFIGURATION FILE FORMAT" << endl <<
+			"Here is an example..." << endl << endl <<
+			"-------------------------------------------------------------------------------" << endl <<
+			"#This is a comment" << endl <<
+			"Solver = z3" << endl <<
+			"Solver = mathsat" << endl << endl <<
+
+			"#Set command line options to be passed to z3 solver" << endl <<
+			"z3.opts = -smt2 -v:0" << endl << endl <<
+			"#Set command line options to be passed to mathsat solver" << endl <<
+			"mathsat.opts = -input=smt2 -verbosity=0" << endl << endl <<
+
+			"#Set the timeout in seconds" << endl <<
+			"timeout = 60.0" << endl << endl <<
+			"#Switch off NSolv's verbose output" << endl <<
+			"verbose = off" << endl <<
+			"-------------------------------------------------------------------------------" << endl << endl <<
+
+			"Each solver must be declared on a separate line as shown above. Options can specified for " << endl <<
+			"each solver by adding a line starting with \"<solver-name>.opts =\". These options are space separated." << endl <<
+			"Quotes (\") are interpreted literally so it is not possible to have a single argument with a space in." <<
+			endl << endl <<
+			"The --solver <name> option and \"Solver = <name>\" option in the configuration file use <name> as the " << endl <<
+			"solver name but also as the executable name. Therefore <name> should be in your PATH." << endl << endl;
+
+
+	cout << o << endl;
 	exit(0);
 }
