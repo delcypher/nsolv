@@ -34,7 +34,7 @@ $ cmake-gui /path/to/nsolv/source-code/directory
 Now press configure. CMake should hopefully find all the dependencies. It will
 report an error if there is a problem.
 
-Alternatively you could use ccmake or if you're brave just plane cmake.
+Alternatively you could use ccmake or if you're brave just plain cmake.
 
 3. Now generate your build system. Usually you just want to generate plain UNIX
 makefiles. You can do this by pressing the "Generate" button in cmake-gui
