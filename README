@@ -1,0 +1,55 @@
+NSolv By Dan Liew.
+
+ABOUT
+NSolv is a simple tool for POSIX compliant operating systems that allows several
+SMTLIBv2 [1] solvers to be invoked in parallel (each solver is in its own
+process). The first solver to respond (sat|unsat) is considered to be the first
+solver to return useful output and the other solvers are killed. After this the
+output of this "first solver" is outputted to standard output.
+
+NSolv is so named because it allows you to launch "N Solv(ers)".
+
+Its original purpose was to act as front-end to several SMTLIBv2 solvers for a
+modified version ([2]) of KLEE [3]. Hopefully the changes made to KLEE will be
+integrated at some point.
+
+BUILDING
+Nsolv uses CMake as its build system. Here are a few commands you can run to get
+started. Nsolv has very few depencies but make sure have the following
+installed.
+
+* Boost libraries and development header files
+* librt (Real time library)
+* A functioning C++ compiler
+
+1. This stage is optional but it is advised you do an out of source build. Pick
+any directory you like to build NSolv in.
+
+$ mkdir /path/to/nsolv/build/directory
+
+2. Now we'll launch your favourite CMake front-end.
+$ cd /path/to/nsolv/build/directory
+$ cmake-gui /path/to/nsolv/source-code/directory
+
+Now press configure. CMake should hopefully find all the dependencies. It will
+report an error if there is a problem.
+
+Alternatively you could use ccmake or if you're brave just plane cmake.
+
+3. Now generate your build system. Usually you just want to generate plain UNIX
+makefiles. You can do this by pressing the "Generate" button in cmake-gui
+
+4. You can now start the build process by running the following command in the
+NSolv build directory.
+
+$ make
+
+USAGE
+
+See the help message
+$ nsolv --help
+
+REFERENCES
+[1] http://goedel.cs.uiowa.edu/smtlib/
+[2] https://github.com/delcypher/klee/tree/smtlib
+[3] http://klee.llvm.org/
