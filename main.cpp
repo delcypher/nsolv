@@ -92,7 +92,7 @@ void parseOptions(int argc, char* argv[])
 						"Specify a solver to use. This option can be set multiple times so that each "
 						"solver is invoked in a different process.")
 				("timeout,t", po::value<double>()->default_value(0.0), "Set timeout in seconds.")
-				("verbose", po::value<bool>(&verbose)->default_value(true), "Print running information to standard error.")
+				("verbose", po::value<bool>(&verbose)->default_value(false), "Print running information to standard error.")
 				;
 
 
