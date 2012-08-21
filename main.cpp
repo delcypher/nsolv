@@ -138,7 +138,7 @@ void parseOptions(int argc, char* argv[])
 
 
 		//If user manually specified a config file check it exists
-		if(vm.count("config") > 0 && ! configFileExists )
+		if(!vm["config"].defaulted() > 0 && ! configFileExists )
 		{
 			cerr << "Error: Configuration file " << configFile.string() << " does not exist!" << endl;
 			exit(1);
