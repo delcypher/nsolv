@@ -7,22 +7,54 @@ namespace po = boost::program_options;
 #include <string>
 #include <fstream>
 #include "SolverManager.h"
+#include <signal.h>
 using namespace std;
 
 //Global store for variables
 po::variables_map vm;
 bool verbose;
 const char NSOLV[] = "nsolv";
-SolverManager* sm;
+SolverManager* sm=NULL;
+struct sigaction act;
 
 //Parses command line options and config file.
 void parseOptions(int argc, char* argv[]);
 
 void printHelp(po::options_description& o);
 
+void handleExit(int signum);
+
 int main(int ac, char* av[])
 {
+	/* We want to prevent SIGINT, SIGTERM & SIGQUIT
+	 * from interrupting the instantiation (parseOptions)
+	 * process so we temporary block them.
+	 */
+	int result=0;
+
+	memset(&act,0,sizeof(act));
+	act.sa_handler = SIG_IGN;
+
+	result=sigaction(SIGTERM,&act,NULL);
+	if(result == -1) cerr << "Couldn't block SIGTERM" << endl;
+	result=sigaction(SIGQUIT,&act,NULL);
+	if(result == -1) cerr << "Couldn't block SIGQUIT" << endl;
+	result=sigaction(SIGINT,&act,NULL);
+	if(result == -1) cerr << "Couldn't block SIGINT" << endl;
+
 	parseOptions(ac,av);
+
+	/* Now that the SolverManager is instantiated it is safe
+	 * to allow the user to force an early exit.
+	 */
+	act.sa_handler = handleExit;
+	result=sigaction(SIGTERM,&act,NULL);
+	if(result == -1) cerr << "Couldn't setup handler for SIGTERM" << endl;
+	result=sigaction(SIGQUIT,&act,NULL);
+	if(result == -1) cerr << "Couldn't setup handler for SIGQUIT" << endl;
+	result=sigaction(SIGINT,&act,NULL);
+	if(result == -1) cerr << "Couldn't setup handler for SIGQUIT" << endl;
+
 
 	sm->invokeSolvers();
 
@@ -230,4 +262,27 @@ void printHelp(po::options_description& o)
 
 	cout << o << endl;
 	exit(0);
+}
+
+void handleExit(int signum)
+{
+	int result=0;
+	if(verbose) cerr << "Received signal " << signum << ". Trying to cleanly exit..." << endl;
+
+	/*Assume the Solver Manager has already been created and not already deleted.
+	 * There is a possible race condition here if sm was already deleted. FIXME
+	 */
+	delete sm;
+
+	//Remove signal handler for signals.
+	act.sa_handler = SIG_DFL;
+	result=sigaction(SIGTERM,&act,NULL);
+	if(result == -1) cerr << "Couldn't set SIGTERM handler to default" << endl;
+	result=sigaction(SIGQUIT,&act,NULL);
+	if(result == -1) cerr << "Couldn't set SIGQUIT handler to default" << endl;
+	result=sigaction(SIGINT,&act,NULL);
+	if(result == -1) cerr << "Couldn't set SIGINT handler to default" << endl;
+
+	//Now send the received signal to ourself.
+	kill(getpid(),signum);
 }
