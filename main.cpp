@@ -232,7 +232,7 @@ void parseOptions(int argc, char* argv[])
 		cerr << "Error: ";
 		if (r.get_option_name() == "--input")
 		{
-			cerr << "Input SMTLIBv2 file must be specified." << endl;
+			cerr << "Input SMTLIBv2 file must be specified. For help use --help" << endl;
 		}
 		else
 		{
