@@ -140,7 +140,7 @@ void parseOptions(int argc, char* argv[])
 		//If user manually specified a config file check it exists
 		if(vm.count("config") > 0 && ! configFileExists )
 		{
-			cerr << "Error: Configuration file " << configFile.generic_string() << " does not exist!" << endl;
+			cerr << "Error: Configuration file " << configFile.string() << " does not exist!" << endl;
 			exit(1);
 		}
 
@@ -148,14 +148,14 @@ void parseOptions(int argc, char* argv[])
 		if(configFileExists)
 		{
 			//parse configuration file for options too
-			if(verbose) cerr << "Parsing configuration file:" << configFile.generic_string() << endl;
+			if(verbose) cerr << "Parsing configuration file:" << configFile.string() << endl;
 
 			ifstream cf;
-			cf.open(configFile.c_str());
+			cf.open(configFile.string().c_str());
 
 			if(!cf.good())
 			{
-				cerr << "Couldn't open configuration file " << configFile.generic_string() << endl;
+				cerr << "Couldn't open configuration file " << configFile.string() << endl;
 			}
 
 
@@ -164,7 +164,7 @@ void parseOptions(int argc, char* argv[])
 			po::notify(vm);
 
 			cf.close();
-			cf.open(configFile.c_str());
+			cf.open(configFile.string().c_str());
 
 			//cf.seekg(0,ios_base::beg);//Move to the beginning of the file.
 

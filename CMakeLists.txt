@@ -7,7 +7,7 @@ set(EXEC_NAME ${CMAKE_PROJECT_NAME})
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 
 #Look for Boost
-find_package(Boost 1.50 REQUIRED COMPONENTS program_options filesystem system)
+find_package(Boost 1.42 REQUIRED COMPONENTS program_options filesystem system)
 include_directories(${Boost_INCLUDE_DIR})
 
 #Look for the Realtime library
