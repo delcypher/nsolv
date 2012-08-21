@@ -19,7 +19,8 @@ class Solver
 
 		//_name is executable path
 		//_cmdOptions is a string with space seperated options (empty for no cmd line options)
-		Solver(const std::string& _name, const std::string& _cmdOptions, const std::string& inputFile);
+		Solver(const std::string& _name, const std::string& _cmdOptions, const std::string& _inputFile,
+				bool _inputOnStdin);
 
 		//Triggering destructor will kill solver
 		~Solver();
@@ -42,6 +43,7 @@ class Solver
 	private:
 		std::string name;
 		std::vector< std::string > cmdOptions;
+		std::string inputFile;//Only used if inputOnStdout is true
 
 		//fd[0] is for parent to read from, fd[1] is for child to write to
 		int fd[2]; //for use with half-duplex pipe
@@ -51,6 +53,8 @@ class Solver
 
 		//Raw byte buffer used to read the first bits of data coming from the child
 		unsigned char buffer[7];
+
+		bool inputOnStdin;
 
 		void kill();
 

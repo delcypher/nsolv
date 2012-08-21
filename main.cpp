@@ -128,9 +128,9 @@ void parseOptions(int argc, char* argv[])
 		//if the configuration file exists then load it
 		boost::filesystem::path configFile(vm["config"].as<string>());
 		bool configFileExists=boost::filesystem::is_regular_file(configFile);
+
+
 		//If user manually specified a config file check it exists
-
-
 		if(vm.count("config") > 0 && ! configFileExists )
 		{
 			cerr << "Error: Configuration file " << configFile.generic_string() << " does not exist!" << endl;
@@ -161,13 +161,25 @@ void parseOptions(int argc, char* argv[])
 
 			//cf.seekg(0,ios_base::beg);//Move to the beginning of the file.
 
-			//loop over solvers and create <solvername>.opts options
+			/*loop over solvers and create
+			 * <solvername>.opts options
+			 * <solvername>.input-on-stdin options
+			 */
 			for(vector<string>::const_iterator s= solverList.begin(); s != solverList.end(); ++s)
 			{
 				string optionName(*s);
+
+				//Do <solvername>.opts
 				optionName+=".opts";
 				indivSolvOpt.add_options() (optionName.c_str(),po::value<string>(),"");
 				if(verbose) cerr << "Looking for \"" << optionName << "\" in " << configFile << endl;
+
+				//Do <solvername>.input-on-stdout
+				optionName=*s;
+				optionName+=".input-on-stdin";
+				indivSolvOpt.add_options() (optionName.c_str(),po::value<bool>()->default_value(false),"");
+				if(verbose) cerr << "Looking for \"" << optionName << "\" in " << configFile << endl;
+
 			}
 
 			//Do second pass for per solver options
@@ -190,12 +202,19 @@ void parseOptions(int argc, char* argv[])
 			string solvOpt(*s);
 			solvOpt+=".opts";
 
+			string stdinOpt(*s);
+			stdinOpt+=".input-on-stdin";
+
+			bool inputOnStdin = false;
+			if(configFileExists && vm.count(stdinOpt.c_str()) && vm[stdinOpt.c_str()].as<bool>() )
+				inputOnStdin=true;
+
 			if(configFileExists && vm.count(solvOpt.c_str()))
 			{
-				sm->addSolver(*s, vm[solvOpt.c_str()].as<string>());
+				sm->addSolver(*s, vm[solvOpt.c_str()].as<string>(), inputOnStdin);
 			}
 			else
-				sm->addSolver(*s);
+				sm->addSolver(*s,inputOnStdin);
 
 		}
 
@@ -232,19 +251,23 @@ void printHelp(po::options_description& o)
 			"NSolv allows several SMTLIBv2 solvers to be invoked simultaneously (each as a separate process)." << endl <<
 			"Multiple calls to --solver will create each solver. It also possible (and recommended) to specify this " << endl <<
 			"in a configuration file. Command line parameters for each solver may also be specified in " << endl <<
-			"the configuration file but NOT on the command line of NSolv." << endl << endl <<
+			"the configuration file but NOT on the command line of NSolv. It also possible to specify how <input> " << endl <<
+			"is given to each solver (either as the last command line parameter or on standard input) in the configuration " << endl <<
+			"file." << endl << endl <<
 
 			"CONFIGURATION FILE FORMAT" << endl <<
 			"Here is an example..." << endl << endl <<
 			"-------------------------------------------------------------------------------" << endl <<
 			"#This is a comment" << endl <<
-			"Solver = z3" << endl <<
-			"Solver = mathsat" << endl << endl <<
-
+			"solver = z3" << endl <<
 			"#Set command line options to be passed to z3 solver" << endl <<
 			"z3.opts = -smt2 -v:0" << endl << endl <<
+
+			"solver = mathsat" << endl <<
 			"#Set command line options to be passed to mathsat solver" << endl <<
-			"mathsat.opts = -input=smt2 -verbosity=0" << endl << endl <<
+			"mathsat.opts = -input=smt2 -verbosity=0" << endl <<
+			"#Set the input file to be passed to mathsat on standard input" << endl <<
+			"mathsat.input-on-stdin = on" << endl << endl <<
 
 			"#Set the timeout in seconds" << endl <<
 			"timeout = 60.0" << endl << endl <<
@@ -254,8 +277,10 @@ void printHelp(po::options_description& o)
 
 			"Each solver must be declared on a separate line as shown above. Options can specified for " << endl <<
 			"each solver by adding a line starting with \"<solver-name>.opts =\". These options are space separated." << endl <<
-			"Quotes (\") are interpreted literally so it is not possible to have a single argument with a space in." <<
-			endl << endl <<
+			"Quotes (\") are interpreted literally so it is not possible to have a single argument with a space in." << endl <<
+			"Whether or not the <input> is given to a particular solver on standard input can be controlled by adding the line " << endl <<
+			"starting with \"<solver-name>.input-on-stdin =\". The default behaviour is to pass <input> as the last command " << endl <<
+			"line parameter to the solver." << endl << endl <<
 			"The --solver <name> option and \"Solver = <name>\" option in the configuration file use <name> as the " << endl <<
 			"solver name but also as the executable name. Therefore <name> should be in your PATH." << endl << endl;
 

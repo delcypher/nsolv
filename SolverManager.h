@@ -13,8 +13,8 @@ class SolverManager
 	public:
 		SolverManager(const std::string& _inputFile, double _timeOut);
 		~SolverManager();
-		void addSolver(const std::string& name, const std::string& cmdLineArgs);
-		void addSolver(const std::string& name);
+		void addSolver(const std::string& name, const std::string& cmdLineArgs, bool inputOnStdin);
+		void addSolver(const std::string& name, bool inputOnStdin);
 		bool invokeSolvers();
 
 		size_t getNumberOfSolvers();

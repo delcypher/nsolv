@@ -7,12 +7,13 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <fcntl.h>
 
 using namespace std;
-Solver::Solver(const std::string& _name, const std::string& _cmdOptions, const std::string& inputFile) :
-name(_name), argv(NULL), pid(0)
+Solver::Solver(const std::string& _name, const std::string& _cmdOptions, const std::string& _inputFile, bool _inputOnStdin) :
+name(_name), cmdOptions(), inputFile(_inputFile) , argv(NULL), pid(0), inputOnStdin(_inputOnStdin)
 {
-	setupArguments(_cmdOptions,inputFile);
+	setupArguments(_cmdOptions,_inputFile);
 
 	//Setup half duplex pipe.
 	int result= pipe(this->fd);
@@ -144,6 +145,30 @@ void Solver::exec()
 		exit(1);
 	}
 
+	if(inputOnStdin)
+	{
+		//The user wants us to send the SMTLIBv2 file on stdinput to the solver
+
+		//get file descriptor.
+		int smtlibFd=0;
+		smtlibFd = ::open(inputFile.c_str(), O_RDONLY);
+
+		if(smtlibFd == -1)
+		{
+			perror("Problem opening input SMTLIBv2 file:");
+			exit(1);
+		}
+
+		//We want the stdinput for the solver to come from the input SMTLIBv2 file
+		result=dup2(smtlibFd,fileno(stdin));
+		if(result == -1)
+		{
+			perror("Problem redirecting input SMTLIBv2 file to stdinput:");
+			exit(1);
+		}
+
+	}
+
 	//Now execute the solver
 	result = execvp(name.c_str(), (char * const*) argv);
 	if(result == -1)
@@ -197,8 +222,12 @@ void Solver::setupArguments(const std::string& cmdOptionsStr, const std::string&
 
 	}
 
-	//That last argument is the input file
-	cmdOptions.push_back(inputFile);
+	//That last argument is the input file if that is what's requested for.
+	if(!inputOnStdin)
+	{
+		cmdOptions.push_back(inputFile);
+	}
+
 
 	int index=0;
 
@@ -210,6 +239,10 @@ void Solver::setupArguments(const std::string& cmdOptionsStr, const std::string&
 		for(vector<string>::const_iterator i =cmdOptions.begin(); i != cmdOptions.end(); ++i, ++index)
 			cerr << "[" << index << "] = \"" << *i << "\"" << endl;
 	}
+
+	if(verbose && inputOnStdin)
+		cerr << "Solver::setupArguments() : Input file (" << inputFile << ") will passed to solver " << name <<
+		        " on standard input." << endl;
 
 	/* We now need to setup a (char*) NULL terminated C
 	 * array for execvp().

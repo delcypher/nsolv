@@ -47,14 +47,14 @@ SolverManager::~SolverManager()
 }
 
 void SolverManager::addSolver(const std::string& name,
-		const std::string& cmdLineArgs)
+		const std::string& cmdLineArgs, bool inputOnStdin)
 {
 	try
 	{
-		solvers.push_back(new Solver(name,cmdLineArgs,inputFile));
+		solvers.push_back(new Solver(name,cmdLineArgs,inputFile, inputOnStdin));
 
 		if(verbose)
-			cerr << "SolverManager: Added solver \"" << name << "\" with command line args:" << cmdLineArgs << endl;
+			cerr << "SolverManager: Added solver \"" << name << endl;
 	}
 	catch(exception& e)
 	{
@@ -63,9 +63,9 @@ void SolverManager::addSolver(const std::string& name,
 	}
 }
 
-void SolverManager::addSolver(const std::string& name)
+void SolverManager::addSolver(const std::string& name, bool inputOnStdin)
 {
-	addSolver(name,empty);
+	addSolver(name,empty, inputOnStdin);
 }
 
 bool SolverManager::invokeSolvers()
