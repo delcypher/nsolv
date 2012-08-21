@@ -20,7 +20,7 @@ installed.
 
 * Boost libraries and development header files
 * librt (Real time library)
-* A functioning C++ compiler
+* Standard development tools (C++ Compiler, development header files, etc...)
 
 1. This stage is optional but it is advised you do an out of source build. Pick
 any directory you like to build NSolv in.
@@ -64,6 +64,9 @@ USAGE
 
 See the help message
 $ nsolv --help
+
+NSolv supports using a configuration file which is the recommended way to use
+it. An example configuration file can be found in "config/example.cfg".
 
 REFERENCES
 [1] http://goedel.cs.uiowa.edu/smtlib/
