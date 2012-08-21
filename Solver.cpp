@@ -28,9 +28,14 @@ name(_name), argv(NULL), pid(0)
 
 Solver::~Solver()
 {
+	//It is presumed this is called only in the parent.
+
 	kill();
 	delete [] argv;
 	argv=NULL;
+
+	//Try closing the read end of the pipe. It may have already been closed in dumpResult()
+	close(fd[0]);
 }
 
 bool Solver::setPID(pid_t p)
@@ -114,6 +119,12 @@ void Solver::dumpResult()
 	{
 		putchar(c);
 		c=fgetc(f);
+	}
+	fflush(stdout);
+	result=fclose(f);
+	if(result !=0)
+	{
+		cerr << "Solver::dumpResult() : Failed to close FILE* to pipe." << endl;
 	}
 
 }
