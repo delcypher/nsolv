@@ -34,6 +34,10 @@ $ cmake-gui /path/to/nsolv/source-code/directory
 Now press configure. CMake should hopefully find all the dependencies. It will
 report an error if there is a problem.
 
+At this point you set the build type by setting CMAKE_BUILD_TYPE. You probably
+either want "Release" or "Debug". If you set this variable press configure
+again.
+
 Alternatively you could use ccmake or if you're brave just plain cmake.
 
 3. Now generate your build system. Usually you just want to generate plain UNIX
@@ -44,6 +48,18 @@ NSolv build directory.
 
 $ make
 
+5. If you wish to install (prefix is CMAKE_INSTALL_PREFIX)  run
+
+$ make install
+
+6. CMake doesn't provide an "uninstall" makefile target. When you run install
+the list of installed files are put in a file called "install_manifest.txt" in
+the root of your binary build folder.
+
+To uninstall run
+
+$ xargs rm < install_manifest.txt
+
 USAGE
 
 See the help message
@@ -53,3 +69,5 @@ REFERENCES
 [1] http://goedel.cs.uiowa.edu/smtlib/
 [2] https://github.com/delcypher/klee/tree/smtlib
 [3] http://klee.llvm.org/
+
+:set textwidth=80

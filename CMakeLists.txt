@@ -23,3 +23,7 @@ SET(NSOLV_SRC main.cpp SolverManager.cpp Solver.cpp)
 
 add_executable(${EXEC_NAME} ${NSOLV_SRC})
 target_link_libraries(${EXEC_NAME} ${Boost_LIBRARIES} ${REALTIME_LIBRARY})
+
+install(TARGETS ${EXEC_NAME}
+		RUNTIME DESTINATION bin
+		)
