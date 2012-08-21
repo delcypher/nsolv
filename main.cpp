@@ -13,22 +13,29 @@ using namespace std;
 //Global store for variables
 po::variables_map vm;
 bool verbose;
+
 const char NSOLV[] = "nsolv";
+
+//This is the default path for the configuration file
+const char DEFAULT_CONFIG_PATH[] = "./nsolv.cfg";
+
 SolverManager* sm=NULL;
 struct sigaction act;
 
 //Parses command line options and config file.
 void parseOptions(int argc, char* argv[]);
 
+//Prints help message
 void printHelp(po::options_description& o);
 
+//Signal handler that attempts to cleanly exit.
 void handleExit(int signum);
 
 int main(int ac, char* av[])
 {
 	/* We want to prevent SIGINT, SIGTERM & SIGQUIT
-	 * from interrupting the instantiation (parseOptions)
-	 * process so we temporary block them.
+	 * from interrupting the instantiation ( parseOptions() )
+	 * process so we temporarily block them.
 	 */
 	int result=0;
 
@@ -74,7 +81,7 @@ void parseOptions(int argc, char* argv[])
 		po::options_description generalOpts("General options");
 		generalOpts.add_options()
 				("help,h", "produce help message")
-				("config,c", po::value<std::string>()->default_value("./nsolv.cfg"), "Path to configuration file.")
+				("config,c", po::value<std::string>()->default_value(DEFAULT_CONFIG_PATH), "Path to configuration file.")
 
 				;
 
@@ -281,8 +288,11 @@ void printHelp(po::options_description& o)
 			"Whether or not the <input> is given to a particular solver on standard input can be controlled by adding the line " << endl <<
 			"starting with \"<solver-name>.input-on-stdin =\". The default behaviour is to pass <input> as the last command " << endl <<
 			"line parameter to the solver." << endl << endl <<
-			"The --solver <name> option and \"Solver = <name>\" option in the configuration file use <name> as the " << endl <<
-			"solver name but also as the executable name. Therefore <name> should be in your PATH." << endl << endl;
+			"The --solver <name> option and \"solver = <name>\" option in the configuration file use <name> as the " << endl <<
+			"solver name but also as the executable name. Therefore <name> should be in your PATH." << endl << endl <<
+
+			"The default path for the configuration file is \"" << DEFAULT_CONFIG_PATH << "\". If this default file does not " << endl <<
+			"exist NSolv will not complain, however if \"--config <file>\" is used <file> must exist." << endl << endl;
 
 
 	cout << o << endl;
