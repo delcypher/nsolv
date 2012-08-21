@@ -54,7 +54,7 @@ void SolverManager::addSolver(const std::string& name,
 		solvers.push_back(new Solver(name,cmdLineArgs,inputFile, inputOnStdin));
 
 		if(verbose)
-			cerr << "SolverManager: Added solver \"" << name << endl;
+			cerr << "SolverManager: Added solver \"" << name << "\"" << endl;
 	}
 	catch(exception& e)
 	{
