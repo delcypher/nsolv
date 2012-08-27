@@ -32,6 +32,10 @@ loggingMode(_loggingMode)
 		//Open the file for output and append to previous logging data
 		loggingFile.open(loggingPath.c_str(), ios_base::out | ios_base::app);
 
+		//set precision for use with times
+		loggingFile.setf(ios::fixed,ios::floatfield);
+		loggingFile.precision(9); //show nanosecond precision.
+
 		if(! loggingFile.is_open())
 		{
 			cerr << "Error : Could not open log file." << endl;
