@@ -11,7 +11,7 @@
 
 using namespace std;
 Solver::Solver(const std::string& _name, const std::string& _cmdOptions, const std::string& _inputFile, bool _inputOnStdin) :
-name(_name), cmdOptions(), inputFile(_inputFile) , argv(NULL), pid(0), inputOnStdin(_inputOnStdin)
+name(_name), cmdOptions(), inputFile(_inputFile) , argv(NULL), pid(0), inputOnStdin(_inputOnStdin), resultAlreadyRead(false)
 {
 	setupArguments(_cmdOptions,_inputFile);
 
@@ -64,13 +64,17 @@ bool Solver::setPID(pid_t p)
 
 Solver::Result Solver::getResult()
 {
-	//Read the result from the child
-
-	int result= ::read(fd[0],&buffer,sizeof(buffer));
-	if(result == -1)
+	//Read the result from the child if we haven't already tried
+	if(!resultAlreadyRead)
 	{
-		perror("read:");
-		exit(1);
+		int result= ::read(fd[0],&buffer,sizeof(buffer));
+		if(result == -1)
+		{
+			perror("read:");
+			exit(1);
+		}
+
+		resultAlreadyRead=true;
 	}
 
 	//check for the valid responses from a SMTLIBv2 solver
@@ -264,6 +268,19 @@ void Solver::setupArguments(const std::string& cmdOptionsStr, const std::string&
 int Solver::getReadFileDescriptor()
 {
 	return fd[0];
+}
+
+const char* Solver::resultToString(Solver::Result r)
+{
+	switch(r)
+	{
+		case SAT: return "sat";
+		case UNSAT: return "unsat";
+		case UNKNOWN: return "unknown";
+		case ERROR:
+		default:
+			return "error";
+	}
 }
 
 bool Solver::bufferMatch(const char cstring[])

@@ -1,6 +1,7 @@
 #ifndef SOLVERMANAGER_H_
 #define SOLVERMANAGER_H_
 
+#include <fstream>
 #include <string>
 #include <vector>
 #include <map>
@@ -13,7 +14,7 @@
 class SolverManager
 {
 	public:
-		SolverManager(const std::string& _inputFile, double _timeOut);
+		SolverManager(const std::string& _inputFile, double _timeOut, bool _loggingMode);
 		~SolverManager();
 		void addSolver(const std::string& name, const std::string& cmdLineArgs, bool inputOnStdin);
 		void addSolver(const std::string& name, bool inputOnStdin);
@@ -36,6 +37,9 @@ class SolverManager
 		fd_set lookingToRead;
 		int largestFileDescriptor;
 
+		bool loggingMode;
+		std::ofstream loggingFile;
+
 		bool timeoutEnabled();
 
 
@@ -53,6 +57,13 @@ class SolverManager
 
 		void removeSolverFromFileDescriptorSet(Solver* s);
 
+		void listSolversToLog();
+
+		void printSolverHeaderToLog();
+
+		void printSolverAnswerToLog(Solver::Result result, const std::string& name);
+
+		void printUnfinishedSolversToLog();
 
 };
 

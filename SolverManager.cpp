@@ -10,26 +10,10 @@
 #include <sys/wait.h>
 using namespace std;
 
-////For SICHLD signal handler
-//static SolverManager* instance=NULL;
-//
-//void sigChldHandler(int signum, siginfo_t* info, void* unused)
-//{
-//	/* We are expecting this to handle SIGCHLD and only when it
-//	 * exited. We have the following available
-//	 * info.{si_pid,si_uid,si_status,si_utime,si_stime,si_code}
-//	 */
-//
-//	//check the child exited
-//	if(info->si_code != CLD_EXITED)
-//	{
-//		cerr << "Warning: The SIGCHLD handler received information about a child that hasn't exited" << endl;
-//		return;
-//	}
-//}
 
-SolverManager::SolverManager(const std::string& _inputFile, double _timeout) :
-solvers(), pidToSolverMap(), inputFile(_inputFile), empty(""), fdToSolverMap(), largestFileDescriptor(0)
+SolverManager::SolverManager(const std::string& _inputFile, double _timeout, bool _loggingMode ) :
+solvers(), pidToSolverMap(), inputFile(_inputFile), empty(""), fdToSolverMap(), largestFileDescriptor(0),
+loggingMode(_loggingMode)
 {
 	//set timeout
 	double intPart;
@@ -41,8 +25,25 @@ solvers(), pidToSolverMap(), inputFile(_inputFile), empty(""), fdToSolverMap(), 
 	if(verbose && _timeout != 0)
 		cerr << "SolverManager: Using timeout of " << timeout.tv_sec << " second(s)." << endl;
 
-	//Allow the signal handler access to us (the assumption is that only one of us exists)
-	//instance=this;
+	if(loggingMode)
+	{
+		if(verbose) cerr << "SolverManager: Using logging mode. Log file is " << loggingPath << endl;
+
+		//Open the file for output and append to previous logging data
+		loggingFile.open(loggingPath.c_str(), ios_base::out | ios_base::app);
+
+		if(! loggingFile.is_open())
+		{
+			cerr << "Error : Could not open log file." << endl;
+		}
+		else
+			loggingFile << "#Start" << endl;
+
+	}
+
+	if(verbose && !loggingMode)
+		cerr << "SolverManager: Using performance mode" << endl;
+
 
 }
 
@@ -65,6 +66,9 @@ SolverManager::~SolverManager()
 			waitpid(i->first,NULL,0);
 		}
 	}
+
+	//close log
+	if(loggingMode) { loggingFile << endl; loggingFile.close();}
 }
 
 void SolverManager::addSolver(const std::string& name,
@@ -101,6 +105,8 @@ bool SolverManager::invokeSolvers()
 		cerr << "SolverManager::invokeSolvers : There are no solvers to invoke." << endl;
 		return false;
 	}
+
+	if(loggingMode) {listSolversToLog(); printSolverHeaderToLog();}
 
 	/* Loop over the solvers. For each solver fork the current process and
 	 * execute the solver's code
@@ -150,6 +156,9 @@ bool SolverManager::invokeSolvers()
 	int numberOfUsableSolvers=solvers.size();
 	int status=0;
 
+	bool answerNotYetPrinted=true; //Used for logging mode so we only print the first answer.
+	Solver::Result solverResult=Solver::ERROR;
+
 	while(numberOfUsableSolvers!=0)
 	{
 		setupFileDescriptorSet();
@@ -168,6 +177,7 @@ bool SolverManager::invokeSolvers()
 		{
 			//Timeout expired!
 			cerr << "Timeout expired!" << endl;
+			if(loggingMode) printUnfinishedSolversToLog();
 			return false;
 		}
 
@@ -207,19 +217,52 @@ bool SolverManager::invokeSolvers()
 		//remove that solver from the file descriptor map.
 		removeSolverFromFileDescriptorSet(solverOfInterest);
 
-		switch(solverOfInterest->getResult())
+		solverResult=solverOfInterest->getResult();
+		switch(solverResult)
 		{
 			case Solver::SAT:
+
 				if(verbose) cerr << "Result: sat" << endl;
-				solverOfInterest->dumpResult();
-				return true;
+				if(answerNotYetPrinted) solverOfInterest->dumpResult();
+
+				if(!loggingMode)
+					return true;
+				else
+				{
+					answerNotYetPrinted=false;
+					//Log output
+					printSolverAnswerToLog(solverResult,solverOfInterest->toString());
+
+					//Try the other solvers.
+					adjustRemainingTime();
+					numberOfUsableSolvers--;
+					continue;
+				}
+
 			case Solver::UNSAT:
+
 				if(verbose) cerr << "Result: unsat" << endl;
-				solverOfInterest->dumpResult();
-				return true;
+				if(answerNotYetPrinted) solverOfInterest->dumpResult();
+
+				if(!loggingMode)
+						return true;
+				else
+				{
+					answerNotYetPrinted=false;
+					//Log output
+					printSolverAnswerToLog(solverResult,solverOfInterest->toString());
+
+					//Try the other solvers.
+					adjustRemainingTime();
+					numberOfUsableSolvers--;
+					continue;
+				}
+
 
 			case Solver::UNKNOWN:
 				if(verbose) cerr << "Result: unknown" << endl << "Trying another solver..." << endl;
+
+				if(loggingMode) printSolverAnswerToLog(solverResult,solverOfInterest->toString());
 				//Try another solver
 				adjustRemainingTime();
 				numberOfUsableSolvers--;
@@ -228,6 +271,8 @@ bool SolverManager::invokeSolvers()
 			case Solver::ERROR:
 				cerr << "Result: Solver (" << solverOfInterest->toString() <<
 						") failed." << endl << "Trying another solver..." << endl;
+
+				if(loggingMode) printSolverAnswerToLog(solverResult,solverOfInterest->toString());
 
 				//Try another solver
 				adjustRemainingTime();
@@ -240,8 +285,14 @@ bool SolverManager::invokeSolvers()
 
 	}
 
-	cerr << "SolverManager::invokeSolvers() : Ran out of usable solvers!" << endl;
-	return false;
+	if(answerNotYetPrinted)
+	{
+		cerr << "SolverManager::invokeSolvers() : Ran out of usable solvers!" << endl;
+		return false;
+	}
+	else
+		return true;
+
 }
 
 size_t SolverManager::getNumberOfSolvers()
@@ -313,5 +364,70 @@ void SolverManager::removeSolverFromFileDescriptorSet(Solver* s)
 			fdToSolverMap.erase(i);
 			return;
 		}
+	}
+}
+
+void SolverManager::listSolversToLog()
+{
+	if(!loggingFile.good())
+		return;
+
+	loggingFile << "# " << solvers.size() << " solvers.";
+
+	for(vector<Solver*>::const_iterator i=solvers.begin(); i!= solvers.end(); ++i)
+	{
+		loggingFile << (*i)->toString() << "," ;
+	}
+
+	loggingFile << endl;
+}
+
+void SolverManager::printSolverHeaderToLog()
+{
+	if(!loggingFile.good())
+		return;
+
+	loggingFile << "# [Solver name ] [ time (seconds)] [answer]" << endl;
+}
+
+void SolverManager::printSolverAnswerToLog(Solver::Result result,
+		const std::string& name)
+{
+	if(!loggingFile.good())
+		return;
+
+	timespec current;
+	if(clock_gettime(CLOCK_MONOTONIC,&current) == -1)
+	{
+		cerr << "Failed to determine current time." << endl;
+		return;
+	}
+
+	//calculate elapsed time since start
+	time_t elapsedTime= current.tv_sec - startTime.tv_sec;
+
+	loggingFile << name << " " << elapsedTime << " " << Solver::resultToString(result) << endl;
+
+
+}
+
+void SolverManager::printUnfinishedSolversToLog()
+{
+	if(!loggingFile.good())
+		return;
+
+	timespec current;
+	if(clock_gettime(CLOCK_MONOTONIC,&current) == -1)
+	{
+		cerr << "Failed to determine current time." << endl;
+		return;
+	}
+
+	//calculate elapsed time since start
+	time_t elapsedTime= current.tv_sec - startTime.tv_sec;
+
+	for(map<int,Solver*>::const_iterator i= fdToSolverMap.begin() ; i!= fdToSolverMap.end(); ++i)
+	{
+		loggingFile << i->second->toString() << " " << elapsedTime << " timeout" << endl;
 	}
 }

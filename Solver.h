@@ -42,6 +42,8 @@ class Solver
 
 		const std::string& toString();
 
+		static const char* resultToString(Solver::Result r);
+
 	private:
 		std::string name;
 		std::vector< std::string > cmdOptions;
@@ -57,6 +59,8 @@ class Solver
 		unsigned char buffer[7];
 
 		bool inputOnStdin;
+
+		bool resultAlreadyRead;
 
 		void kill();
 

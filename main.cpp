@@ -13,6 +13,7 @@ using namespace std;
 //Global store for variables
 po::variables_map vm;
 bool verbose;
+string loggingPath;
 
 const char NSOLV[] = "nsolv";
 
@@ -93,6 +94,7 @@ void parseOptions(int argc, char* argv[])
 						"solver is invoked in a different process.")
 				("timeout,t", po::value<double>()->default_value(0.0), "Set timeout in seconds.")
 				("verbose", po::value<bool>(&verbose)->default_value(false), "Print running information to standard error.")
+				("logging-path", po::value<string>(&loggingPath)->default_value(""), "Enable logging mode (off by default) and set the path to the log file.")
 				;
 
 
@@ -196,7 +198,17 @@ void parseOptions(int argc, char* argv[])
 			cf.close();
 		}
 
-		try {sm = new SolverManager(vm["input"].as<string>(),vm["timeout"].as<double>());}
+		/* See if we are using logging mode
+		 *
+		 */
+		bool lMode=false;
+		if(vm["logging-path"].as<string>().length() != 0)
+		{
+			lMode=true;
+		}
+
+
+		try {sm = new SolverManager(vm["input"].as<string>(),vm["timeout"].as<double>(),lMode);}
 		catch(std::bad_alloc& e)
 		{
 			cerr << "Failed to allocate memory of SolverManager:" << e.what() << endl;
@@ -261,6 +273,12 @@ void printHelp(po::options_description& o)
 			"the configuration file but NOT on the command line of NSolv. It also possible to specify how <input> " << endl <<
 			"is given to each solver (either as the last command line parameter or on standard input) in the configuration " << endl <<
 			"file." << endl << endl <<
+
+			"Nsolv works in two modes; performance mode and logging mode. The default is performance mode. In this " << endl <<
+			"mode the answer from the first solver to return (sat|unsat) is used and all other solvers are killed." << endl <<
+			"In logging mode the answer from the first solver to return (sat|unsat) is used but are solvers are allowed to " << endl <<
+			"finish (unless they timeout). The times and answers from the solvers are saved to a log file " << endl <<
+			"(see --logging-path)." << endl << endl <<
 
 			"CONFIGURATION FILE FORMAT" << endl <<
 			"Here is an example..." << endl << endl <<

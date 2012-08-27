@@ -1,11 +1,20 @@
 NSolv By Dan Liew.
 
 ABOUT
+
 NSolv is a simple tool for POSIX compliant operating systems that allows several
 SMTLIBv2 [1] solvers to be invoked in parallel (each solver is in its own
-process). The first solver to respond (sat|unsat) is considered to be the first
+process). The tool can operate in one of two modes
+
+* Performance Mode
+The first solver to respond (sat|unsat) is considered to be the first
 solver to return useful output and the other solvers are killed. After this the
 output of this "first solver" is outputted to standard output.
+
+* Logging Mode
+The first solver to respond (sat|unsat) is considered to be the first
+solver to return useful output. The other solvers are allowed to finish unless
+they timeout. The results and runtime of all solvers are recorded to a log file.
 
 NSolv is so named because it allows you to launch "N Solv(ers)".
 
