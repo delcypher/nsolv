@@ -7,6 +7,8 @@
 #include "Solver.h"
 #include <unistd.h>
 #include <time.h>
+#include <queue>
+#include <sys/select.h>
 
 class SolverManager
 {
@@ -24,10 +26,15 @@ class SolverManager
 		std::map<pid_t,Solver*> pidToSolverMap;
 		std::string inputFile;
 		const std::string empty;
-		timespec timeout;
 
+		timespec timeout;
 		timespec startTime;
 		timespec originalTimeout;
+
+		std::map<int,Solver*> fdToSolverMap;
+
+		fd_set lookingToRead;
+		int largestFileDescriptor;
 
 		bool timeoutEnabled();
 
@@ -38,6 +45,13 @@ class SolverManager
 		 * user originally asked for.
 		 */
 		void adjustRemainingTime();
+
+		//Configures "lookingToRead" to be set up for the solvers in "fdToSolverMap"
+		void setupFileDescriptorSet();
+
+		Solver* getSolverFromFileDescriptorSet();
+
+		void removeSolverFromFileDescriptorSet(Solver* s);
 
 
 };

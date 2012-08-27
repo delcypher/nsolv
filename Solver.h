@@ -38,6 +38,8 @@ class Solver
 		//Only to be called within child. Will replace current process with solver program.
 		void exec();
 
+		int getReadFileDescriptor();
+
 		const std::string& toString();
 
 	private:

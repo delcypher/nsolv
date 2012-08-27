@@ -261,6 +261,10 @@ void Solver::setupArguments(const std::string& cmdOptionsStr, const std::string&
 	argv[cmdOptions.size()] = (char*) NULL ;
 }
 
+int Solver::getReadFileDescriptor()
+{
+	return fd[0];
+}
 
 bool Solver::bufferMatch(const char cstring[])
 {

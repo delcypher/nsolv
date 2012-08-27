@@ -10,8 +10,26 @@
 #include <sys/wait.h>
 using namespace std;
 
+////For SICHLD signal handler
+//static SolverManager* instance=NULL;
+//
+//void sigChldHandler(int signum, siginfo_t* info, void* unused)
+//{
+//	/* We are expecting this to handle SIGCHLD and only when it
+//	 * exited. We have the following available
+//	 * info.{si_pid,si_uid,si_status,si_utime,si_stime,si_code}
+//	 */
+//
+//	//check the child exited
+//	if(info->si_code != CLD_EXITED)
+//	{
+//		cerr << "Warning: The SIGCHLD handler received information about a child that hasn't exited" << endl;
+//		return;
+//	}
+//}
+
 SolverManager::SolverManager(const std::string& _inputFile, double _timeout) :
-solvers(), pidToSolverMap(), inputFile(_inputFile), empty("")
+solvers(), pidToSolverMap(), inputFile(_inputFile), empty(""), fdToSolverMap(), largestFileDescriptor(0)
 {
 	//set timeout
 	double intPart;
@@ -22,6 +40,9 @@ solvers(), pidToSolverMap(), inputFile(_inputFile), empty("")
 
 	if(verbose && _timeout != 0)
 		cerr << "SolverManager: Using timeout of " << timeout.tv_sec << " second(s)." << endl;
+
+	//Allow the signal handler access to us (the assumption is that only one of us exists)
+	//instance=this;
 
 }
 
@@ -49,9 +70,14 @@ SolverManager::~SolverManager()
 void SolverManager::addSolver(const std::string& name,
 		const std::string& cmdLineArgs, bool inputOnStdin)
 {
+	Solver* s=NULL;
 	try
 	{
-		solvers.push_back(new Solver(name,cmdLineArgs,inputFile, inputOnStdin));
+		s=new Solver(name,cmdLineArgs,inputFile, inputOnStdin);
+		solvers.push_back(s);
+
+		if(! fdToSolverMap.insert( make_pair(s->getReadFileDescriptor(),s)).second)
+			cerr << "Warning: Failed to record file descriptor -> solver mapping" << endl;
 
 		if(verbose)
 			cerr << "SolverManager: Added solver \"" << name << "\"" << endl;
@@ -76,21 +102,6 @@ bool SolverManager::invokeSolvers()
 		return false;
 	}
 
-	/* We block (the signal isn't lost, it is queued for us by the kernel) SIGCHLD.
-	 * This prevents a race-condition where the child exits before we call sigwait() or sigtimedwait()
-	 */
-	sigset_t signals;
-	sigemptyset(&signals);
-	sigaddset(&signals,SIGCHLD);
-
-	if(sigprocmask(SIG_BLOCK,&signals,NULL) == -1)
-	{
-		cerr << "SolverManager::invokeSolvers() : Failed to block SIGCHLD." << endl;
-		return false;
-	}
-
-
-
 	/* Loop over the solvers. For each solver fork the current process and
 	 * execute the solver's code
 	 */
@@ -108,14 +119,6 @@ bool SolverManager::invokeSolvers()
 		if(pid == 0)
 		{
 			//Child code
-
-			//We inherent the blocking of SIGCHLD. The solver might do its own forking so we should unblock it
-			if(sigprocmask(SIG_UNBLOCK,&signals,NULL) == -1)
-			{
-				cerr << "SolverManager::invokeSolvers() : Warning couldn't unblock SIGCHLD in child process." << endl;
-			}
-
-
 			(*s)->exec();
 		}
 		else
@@ -134,95 +137,75 @@ bool SolverManager::invokeSolvers()
 		}
 	}
 
+	//Parent code (wait for solvers)
 
 	//record the start time
 	if(clock_gettime(CLOCK_MONOTONIC,&startTime) == -1)
 		cerr << "WARNING: Failed to record start time!" << endl;
 
-	int returnedSignalNumber;
-	siginfo_t info;
-	memset(&info,0,sizeof(info));
+
+
 	Solver* solverOfInterest=NULL;
-	pid_t returningSolver=0;
+	int numberOfReadySolvers=0;
 	int numberOfUsableSolvers=solvers.size();
 	int status=0;
-	while(true)
-	{
-		if(numberOfUsableSolvers ==0)
-		{
-			cerr << "SolverManager::invokeSolvers() : Ran out of usable solvers!" << endl;
-			return false;
-		}
 
+	while(numberOfUsableSolvers!=0)
+	{
+		setupFileDescriptorSet();
 
 		//Now wait for a solver to return.
 		if(timeoutEnabled())
 		{
-			returnedSignalNumber = sigtimedwait(&signals,&info,&timeout);
+			numberOfReadySolvers = pselect(largestFileDescriptor +1,&lookingToRead,NULL,NULL,&timeout,NULL);
 		}
 		else
 		{
-			returnedSignalNumber = sigwaitinfo(&signals,&info);
+			numberOfReadySolvers = pselect(largestFileDescriptor +1,&lookingToRead,NULL,NULL,NULL,NULL);
 		}
 
-		if(returnedSignalNumber == -1)
+		if(numberOfReadySolvers==0)
+		{
+			//Timeout expired!
+			cerr << "Timeout expired!" << endl;
+			return false;
+		}
+
+		if(numberOfReadySolvers == -1)
 		{
 			switch(errno)
 			{
-				case EAGAIN:
-					//Timeout has occured
-					cerr << "Timeout expired!" << endl;
+				case EBADF:
+					cerr << "Bad file descriptor in set given to pselect()" << endl;
 					return false;
 				case EINTR:
 					//Unexpected signal
-					cerr << "Received unexpected signal!" << endl;
+					cerr << "Received unexpected signal while waiting in pselect()" << endl;
 					return false;
 
 				case EINVAL:
-					//Invalid timeout
-					cerr << "sigtimedwait() was given an invalid timeout!" << endl;
+					//Invalid parameters
+					cerr << "Invalid parameters given to pselect()" << endl;
 					return false;
 
 				default:
-					cerr << "Something went wrong waiting for SIGCHLD" << endl;
+					cerr << "Something went wrong waiting for solver via pselect()" << endl;
 					return false;
 			}
 		}
 
-		/* We need to examine the solver that returned (info.si_pid is empty!!)
-		 * We seem to need to use waitpid(). There's no guarantee that it's the same solver
-		 * that sigtimedwait() or sigwaitinfo() received
-		 * but let's hope it is.
-		 */
-		returningSolver=waitpid(0,&status,0);
-		if(returningSolver == -1)
+		solverOfInterest = getSolverFromFileDescriptorSet();
+		if(solverOfInterest==NULL)
 		{
-			cerr << "SolverManager::invokeSolvers() : Couldn't get the PID of the solver that returned" << endl;
+			cerr << "Error: Couldn't find solver from its file descriptor." << endl;
 			return false;
 		}
 
-		if(pidToSolverMap.count(returningSolver) != 1)
-		{
-			cerr << "SolverManager::invokeSolvers() : The returned Solver (" << returningSolver <<
-					") didn't have an expected PID." << endl;
-			return false;
-		}
-
-
-		solverOfInterest=pidToSolverMap.find(returningSolver)->second;
-
-		if(!WIFEXITED(status))
-		{
-			//Child didn't exit cleanly!
-			cerr << "SolverManager::invokeSolvers() : Solver " << solverOfInterest->toString() <<
-					" did not exit cleanly!" << endl;
-			adjustRemainingTime();
-			//decrement the number of available solvers
-			numberOfUsableSolvers--;
-			continue;
-		}
 
 		if(verbose) cerr << "Solver:" << solverOfInterest->toString() << " returned. Checking result..." << endl;
+
+		//remove that solver from the file descriptor map.
+		removeSolverFromFileDescriptorSet(solverOfInterest);
 
 		switch(solverOfInterest->getResult())
 		{
@@ -257,7 +240,8 @@ bool SolverManager::invokeSolvers()
 
 	}
 
-	return false; //shouldn't be reachable
+	cerr << "SolverManager::invokeSolvers() : Ran out of usable solvers!" << endl;
+	return false;
 }
 
 size_t SolverManager::getNumberOfSolvers()
@@ -288,4 +272,46 @@ void SolverManager::adjustRemainingTime()
 		timeout.tv_sec = originalTimeout.tv_sec - elapsedTime;
 
 	if(verbose && timeoutEnabled()) cerr << "Remaining time:" << timeout.tv_sec << " second(s)." << endl;
+}
+
+void SolverManager::setupFileDescriptorSet()
+{
+	//set no file descriptors
+	FD_ZERO(&lookingToRead);
+	largestFileDescriptor=0;
+
+	//Add the file descriptors currently in the map.
+	for(map<int,Solver*>::const_iterator i= fdToSolverMap.begin(); i!= fdToSolverMap.end(); ++i)
+	{
+		//Try to record the largest file descriptor
+		if(i->first > largestFileDescriptor) largestFileDescriptor=i->first;
+
+		FD_SET(i->first,&lookingToRead);
+	}
+}
+
+Solver* SolverManager::getSolverFromFileDescriptorSet()
+{
+	//Loop through known solvers using the first found solver
+	for(vector<Solver*>::const_iterator i=solvers.begin(); i!= solvers.end(); ++i)
+	{
+		if(FD_ISSET((*i)->getReadFileDescriptor(),&lookingToRead))
+			return *i;
+	}
+
+	//We didn't find anything.
+	return NULL;
+}
+
+void SolverManager::removeSolverFromFileDescriptorSet(Solver* s)
+{
+	for(map<int,Solver*>::iterator i= fdToSolverMap.begin(); i!= fdToSolverMap.end(); ++i)
+	{
+		if(i->second == s)
+		{
+			//remove this solver
+			fdToSolverMap.erase(i);
+			return;
+		}
+	}
 }
