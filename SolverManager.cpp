@@ -404,9 +404,9 @@ void SolverManager::printSolverAnswerToLog(Solver::Result result,
 	}
 
 	//calculate elapsed time since start
-	time_t elapsedTime= current.tv_sec - startTime.tv_sec;
+	timespec elapsedTime = subtract(current,startTime);
 
-	loggingFile << name << " " << elapsedTime << " " << Solver::resultToString(result) << endl;
+	loggingFile << name << " " << toDouble(elapsedTime) << " " << Solver::resultToString(result) << endl;
 
 
 }
@@ -424,10 +424,50 @@ void SolverManager::printUnfinishedSolversToLog()
 	}
 
 	//calculate elapsed time since start
-	time_t elapsedTime= current.tv_sec - startTime.tv_sec;
+	timespec elapsedTime = subtract(current,startTime);
 
 	for(map<int,Solver*>::const_iterator i= fdToSolverMap.begin() ; i!= fdToSolverMap.end(); ++i)
 	{
-		loggingFile << i->second->toString() << " " << elapsedTime << " timeout" << endl;
+		loggingFile << i->second->toString() << " " << toDouble(elapsedTime) << " timeout" << endl;
 	}
+}
+
+struct timespec subtract(struct timespec a, struct timespec b)
+{
+	/* Based on by Alex Measday's ts_util function from his General purpose library.
+	 * http://www.geonius.com/software/libgpl/ts_util.html
+	 */
+	struct timespec result;
+
+	/* Handle the case where we would calculate a negative time.
+	 * We just return 0.
+	 */
+	if( (a.tv_sec < b.tv_sec) ||
+		((a.tv_sec == b.tv_sec) && (a.tv_nsec < b.tv_nsec) )
+	  )
+	{
+		result.tv_sec = result.tv_sec =0;
+		return result;
+	}
+
+	//the result will be positive.
+	result.tv_sec = a.tv_sec - b.tv_sec;
+
+	//check if we need to borrow from the seconds.
+	if( a.tv_nsec < b.tv_nsec)
+	{
+		result.tv_sec -=1; //borrow a second
+		result.tv_nsec = 1000000000L + a.tv_nsec - b.tv_nsec;
+	}
+	else
+		result.tv_nsec = a.tv_nsec - b.tv_nsec;
+
+	return result;
+}
+
+double toDouble(struct timespec t)
+{
+	double value = t.tv_sec;
+	value += (static_cast<double>(t.tv_nsec))/1E9;
+	return value;
 }

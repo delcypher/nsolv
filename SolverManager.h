@@ -67,5 +67,8 @@ class SolverManager
 
 };
 
+//helper function a -b
+struct timespec subtract(struct timespec a, struct timespec b);
+double toDouble(struct timespec t);
 
 #endif /* SOLVERMANAGER_H_ */
