@@ -227,7 +227,12 @@ bool SolverManager::invokeSolvers()
 			case Solver::SAT:
 
 				if(verbose) cerr << "Result: sat" << endl;
-				if(answerNotYetPrinted) solverOfInterest->dumpResult();
+				if(answerNotYetPrinted)
+				{
+					solverOfInterest->dumpResult();
+					if(loggingMode && loggingFile.good())
+						loggingFile << "#First solver to finish " << solverOfInterest->toString() << endl;
+				}
 
 				if(!loggingMode)
 					return true;
@@ -246,7 +251,12 @@ bool SolverManager::invokeSolvers()
 			case Solver::UNSAT:
 
 				if(verbose) cerr << "Result: unsat" << endl;
-				if(answerNotYetPrinted) solverOfInterest->dumpResult();
+				if(answerNotYetPrinted)
+				{
+					solverOfInterest->dumpResult();
+					if(loggingMode && loggingFile.good())
+						loggingFile << "#First solver to finish " << solverOfInterest->toString() << endl;
+				}
 
 				if(!loggingMode)
 						return true;
@@ -376,7 +386,7 @@ void SolverManager::listSolversToLog()
 	if(!loggingFile.good())
 		return;
 
-	loggingFile << "# " << solvers.size() << " solvers.";
+	loggingFile << "# " << solvers.size() << " solvers: ";
 
 	for(vector<Solver*>::const_iterator i=solvers.begin(); i!= solvers.end(); ++i)
 	{
