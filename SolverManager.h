@@ -71,4 +71,8 @@ class SolverManager
 struct timespec subtract(struct timespec a, struct timespec b);
 double toDouble(struct timespec t);
 
+bool operator==(struct timespec a, struct timespec b);
+bool operator>(struct timespec a, struct timespec b);
+bool operator>=(struct timespec a, struct timespec b);
+
 #endif /* SOLVERMANAGER_H_ */

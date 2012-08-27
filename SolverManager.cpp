@@ -315,14 +315,14 @@ void SolverManager::adjustRemainingTime()
 	}
 
 	//calculate elapsed time since start
-	time_t elapsedTime= current.tv_sec - startTime.tv_sec;
+	timespec elapsedTime= subtract(current,startTime);
 
-	if(elapsedTime >= originalTimeout.tv_sec)
-		timeout.tv_sec=0;
+	if(elapsedTime >= originalTimeout)
+		timeout.tv_sec= timeout.tv_nsec =0;
 	else
-		timeout.tv_sec = originalTimeout.tv_sec - elapsedTime;
+		timeout= subtract(originalTimeout,elapsedTime);
 
-	if(verbose && timeoutEnabled()) cerr << "Remaining time:" << timeout.tv_sec << " second(s)." << endl;
+	if(verbose && timeoutEnabled()) cerr << "Remaining time:" << toDouble(timeout) << " second(s)." << endl;
 }
 
 void SolverManager::setupFileDescriptorSet()
@@ -471,3 +471,24 @@ double toDouble(struct timespec t)
 	value += (static_cast<double>(t.tv_nsec))/1E9;
 	return value;
 }
+
+bool operator==(struct timespec a, struct timespec b)
+{
+	if(a.tv_sec == b.tv_sec && a.tv_nsec == b.tv_nsec)
+		return true;
+	else
+		return false;
+}
+
+bool operator>(struct timespec a, struct timespec b)
+{
+	if(a.tv_sec > b.tv_sec)
+		return true;
+
+	if( (a.tv_sec == b.tv_sec) && (a.tv_nsec > b.tv_nsec) )
+		return true;
+
+	return false;
+}
+
+bool operator>=(struct timespec a, struct timespec b) { return ( a==b || a>b);}
