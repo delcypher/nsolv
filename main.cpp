@@ -136,7 +136,8 @@ void parseOptions(int argc, char* argv[])
 
 		//if the configuration file exists then load it
 		boost::filesystem::path configFile(vm["config"].as<string>());
-		bool configFileExists=boost::filesystem::is_regular_file(configFile);
+		bool configFileExists=boost::filesystem::is_regular_file(configFile) ||
+					boost::filesystem::is_symlink(configFile);
 
 
 		//If user manually specified a config file check it exists
