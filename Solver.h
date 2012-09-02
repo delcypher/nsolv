@@ -62,6 +62,8 @@ class Solver
 
 		bool resultAlreadyRead;
 
+		int numberOfBytesReadFromPipe;
+
 		void kill();
 
 		void setupArguments(const std::string& _cmdOptions, const std::string& inputFile);

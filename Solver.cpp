@@ -11,7 +11,8 @@
 
 using namespace std;
 Solver::Solver(const std::string& _name, const std::string& _cmdOptions, const std::string& _inputFile, bool _inputOnStdin) :
-name(_name), cmdOptions(), inputFile(_inputFile) , argv(NULL), pid(0), inputOnStdin(_inputOnStdin), resultAlreadyRead(false)
+name(_name), cmdOptions(), inputFile(_inputFile) , argv(NULL), pid(0), inputOnStdin(_inputOnStdin), resultAlreadyRead(false),
+numberOfBytesReadFromPipe(0)
 {
 	setupArguments(_cmdOptions,_inputFile);
 
@@ -67,14 +68,20 @@ Solver::Result Solver::getResult()
 	//Read the result from the child if we haven't already tried
 	if(!resultAlreadyRead)
 	{
-		int result= ::read(fd[0],&buffer,sizeof(buffer));
-		if(result == -1)
-		{
-			perror("read:");
-			exit(1);
-		}
+			int result=::read(fd[0],buffer,sizeof(buffer));
+			if(result == -1)
+			{
+				perror("read:");
+				exit(1);
+			}
 
 		resultAlreadyRead=true;
+
+		/* Ideally we would like to read sizeof(buffer) bytes, but the read()
+		 * system call does NOT guarantee this! So we must record how many bytes it gave us.
+		 * This might not actually be enough to check for (sat|unsat|unknown) but let's hope it is!
+		 */
+		numberOfBytesReadFromPipe=result;
 	}
 
 	//check for the valid responses from a SMTLIBv2 solver
@@ -96,10 +103,16 @@ Solver::Result Solver::getResult()
 
 void Solver::dumpResult()
 {
+	if(resultAlreadyRead==false)
+	{
+		cerr << "Solver::dumpResult() . You need to call getResult() first!" << endl;
+		return;
+	}
+
 	int result=0;
 
 	//dump the buffer to stdout
-	result=write(fileno(stdout),buffer,sizeof(buffer));
+	result=write(fileno(stdout),buffer,numberOfBytesReadFromPipe);
 	if(result== -1)
 	{
 		cerr << "Solver::dumpResult() : Failed to write buffer to stdout." << endl;
