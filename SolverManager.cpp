@@ -160,7 +160,7 @@ bool SolverManager::invokeSolvers()
 	int numberOfUsableSolvers=solvers.size();
 	int status=0;
 
-	bool answerNotYetPrinted=true; //Used for logging mode so we only print the first answer.
+	Solver* winningSolver=NULL;
 	Solver::Result solverResult=Solver::ERROR;
 
 	while(numberOfUsableSolvers!=0)
@@ -227,18 +227,24 @@ bool SolverManager::invokeSolvers()
 			case Solver::SAT:
 
 				if(verbose) cerr << "Result: sat" << endl;
-				if(answerNotYetPrinted)
+
+				if(winningSolver==NULL)
 				{
-					solverOfInterest->dumpResult();
-					if(loggingMode && loggingFile.good())
+
+					winningSolver=solverOfInterest;//Record the solver that won so we can print its output later.
+
+					if(loggingMode)
 						loggingFile << "#First solver to finish " << solverOfInterest->toString() << endl;
 				}
 
 				if(!loggingMode)
-					return true;
+				{
+					//We don't want to let any other solvers run
+					numberOfUsableSolvers=0;
+					continue;
+				}
 				else
 				{
-					answerNotYetPrinted=false;
 					//Log output
 					printSolverAnswerToLog(solverResult,solverOfInterest->toString());
 
@@ -251,18 +257,24 @@ bool SolverManager::invokeSolvers()
 			case Solver::UNSAT:
 
 				if(verbose) cerr << "Result: unsat" << endl;
-				if(answerNotYetPrinted)
+
+				if(winningSolver==NULL)
 				{
-					solverOfInterest->dumpResult();
-					if(loggingMode && loggingFile.good())
-						loggingFile << "#First solver to finish " << solverOfInterest->toString() << endl;
+						winningSolver=solverOfInterest;//Record the winning solver so we can output its output later.
+
+						if(loggingMode)
+							loggingFile << "#First solver to finish " << solverOfInterest->toString() << endl;
 				}
 
+
 				if(!loggingMode)
-						return true;
+				{
+					//We don't want to let any other solvers run
+					numberOfUsableSolvers=0;
+					continue;
+				}
 				else
 				{
-					answerNotYetPrinted=false;
 					//Log output
 					printSolverAnswerToLog(solverResult,solverOfInterest->toString());
 
@@ -299,13 +311,29 @@ bool SolverManager::invokeSolvers()
 
 	}
 
-	if(answerNotYetPrinted)
+	if(winningSolver==NULL)
 	{
 		cerr << "SolverManager::invokeSolvers() : Ran out of usable solvers!" << endl;
 		return false;
 	}
 	else
+	{
+		/* kill all other solvers if possible.
+		 * For some reason if we don't do this calling dumpResult() on the winning solver
+		 * blocks. I don't know why, it shouldn't happen because the file descriptor of each solver
+		 * should be separate from each other.
+		 */
+
+		for(vector<Solver*>::iterator i=solvers.begin(); i!= solvers.end(); ++i)
+		{
+			if(*i != winningSolver)
+				(*i)->kill();
+		}
+
+		//print the output of the winning solver
+		winningSolver->dumpResult();
 		return true;
+	}
 
 }
 

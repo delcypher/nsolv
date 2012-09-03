@@ -44,6 +44,8 @@ class Solver
 
 		static const char* resultToString(Solver::Result r);
 
+		void kill();
+
 	private:
 		std::string name;
 		std::vector< std::string > cmdOptions;
@@ -64,7 +66,7 @@ class Solver
 
 		int numberOfBytesReadFromPipe;
 
-		void kill();
+
 
 		void setupArguments(const std::string& _cmdOptions, const std::string& inputFile);
 
