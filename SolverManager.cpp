@@ -39,6 +39,7 @@ loggingMode(_loggingMode)
 		if(! loggingFile.is_open())
 		{
 			cerr << "Error : Could not open log file." << endl;
+			exit(1);
 		}
 		else
 			loggingFile << "#Start" << endl;
