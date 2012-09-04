@@ -23,7 +23,7 @@ if [ -z "${SOLVERS}" ]; then
 	exit
 fi
 
-echo "# [Solver name] [ number of times came first]"
+echo -e "#[Solver name]\t[ number of times came first]"
 #Loop over solvers extracting info
 for solver in ${SOLVERS}
 do

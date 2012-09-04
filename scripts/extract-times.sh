@@ -34,7 +34,6 @@ if [ -z "${SOLVERS}" ]; then
 	exit
 fi
 
-echo "# [Solver name] [ number of times came first]"
 #Loop over solvers extracting info
 for solver in ${SOLVERS}
 do
@@ -42,7 +41,7 @@ do
 OUTPUT_FILE="${OUTPUT_DIR}/${solver}-runtimes.txt"
 echo "Creating ${OUTPUT_FILE}"
 
-echo "#[Run time] [ satisfiability]" > "${OUTPUT_FILE}"
+echo -e "#[Run time]\t[ satisfiability]" > "${OUTPUT_FILE}"
 cat "${INPUT}" | awk 'BEGIN { OFS="\t";}
 		     /^'${solver}'/ { print $2,$3;} ' >> "${OUTPUT_FILE}"
 
