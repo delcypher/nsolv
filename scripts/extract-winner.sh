@@ -28,8 +28,8 @@ echo -e "#[Solver name]\t[ number of times came first]"
 for solver in ${SOLVERS}
 do
 
-cat "${INPUT}" | awk 'BEGIN { counter=0;}
+cat "${INPUT}" | awk 'BEGIN { counter=0; OFS="\t";}
 		     /#First solver to finish/ { if($5 == "'${solver}'") counter++;}
-	              END { print "'${solver}' " counter;}'
+	              END { print "'${solver}'",counter;}'
 
 done
