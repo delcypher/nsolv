@@ -204,7 +204,7 @@ const std::string& Solver::toString()
 void Solver::kill()
 {
 	if(verbose) cerr << "Trying to kill solver " << name << " with pid:" << pid << endl;
-	int result = ::kill(pid, SIGKILL);
+	int result = ::kill(pid, SIGTERM);
 
 	//Note ESRCH is when pid didn't exists, we don't care about that case.
 	if(result == -1 && errno != ESRCH)

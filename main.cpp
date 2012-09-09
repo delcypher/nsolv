@@ -14,6 +14,7 @@ using namespace std;
 po::variables_map vm;
 bool verbose;
 string loggingPath;
+pid_t nsolvProcess;
 
 const char NSOLV[] = "nsolv";
 
@@ -34,6 +35,8 @@ void handleExit(int signum);
 
 int main(int ac, char* av[])
 {
+	nsolvProcess=getpid();
+
 	/* We want to prevent SIGINT, SIGTERM & SIGQUIT
 	 * from interrupting the instantiation ( parseOptions() )
 	 * process so we temporarily block them.
@@ -321,12 +324,20 @@ void printHelp(po::options_description& o)
 void handleExit(int signum)
 {
 	int result=0;
-	if(verbose) cerr << "Received signal " << signum << ". Trying to cleanly exit..." << endl;
+	if(verbose) cerr << "(" << getpid() << ") Received signal " << signum << ". Trying to cleanly exit..." << endl;
 
-	/*Assume the Solver Manager has already been created and not already deleted.
-	 * There is a possible race condition here if sm was already deleted. FIXME
+	/* Need to handle a special edge case. This signal handler can get called in the child
+	 * if it hasn't started its solver yet. If this happens and we delete the solverManager, then we'll
+	 * trigger a delete of all other solvers which isn't desired. Only the parent process should
+	 * be allowed to delete the solverManager
 	 */
-	delete sm;
+	if(getpid() == nsolvProcess)
+	{
+		/*Assume the Solver Manager has already been created and not already deleted.
+		 * There is a possible race condition here if sm was already deleted. FIXME
+		 */
+		delete sm;
+	}
 
 	//Remove signal handler for signals.
 	act.sa_handler = SIG_DFL;
