@@ -23,12 +23,13 @@ modified version ([2]) of KLEE [3]. Hopefully the changes made to KLEE will be
 integrated at some point.
 
 BUILDING
-Nsolv uses CMake as its build system. Here are a few commands you can run to get
+NSolv uses CMake as its build system. Here are a few commands you can run to get
 started. Nsolv has very few depencies but make sure have the following
 installed.
 
 * Boost libraries and development header files
 * librt (Real time library)
+* PThreads library
 * Standard development tools (C++ Compiler, development header files, etc...)
 
 1. This stage is optional but it is advised you do an out of source build. Pick
