@@ -10,6 +10,7 @@
 #include <time.h>
 #include <queue>
 #include <sys/select.h>
+#include <semaphore.h>
 
 class SolverManager
 {
@@ -39,6 +40,9 @@ class SolverManager
 
 		bool loggingMode;
 		std::ofstream loggingFile;
+
+		sem_t* solverSynchronisingSemaphore;
+		std::string solverSyncName;
 
 		bool timeoutEnabled();
 

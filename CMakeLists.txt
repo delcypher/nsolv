@@ -17,12 +17,14 @@ if(NOT REALTIME_LIBRARY)
 	message(FATAL_ERROR "The Realtime library could not be found.")
 endif()
 
+#Look for pthreads
+find_package(Threads REQUIRED)
 
 
 SET(NSOLV_SRC main.cpp SolverManager.cpp Solver.cpp)
 
 add_executable(${EXEC_NAME} ${NSOLV_SRC})
-target_link_libraries(${EXEC_NAME} ${Boost_LIBRARIES} ${REALTIME_LIBRARY})
+target_link_libraries(${EXEC_NAME} ${Boost_LIBRARIES} ${REALTIME_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 
 install(TARGETS ${EXEC_NAME}
 		RUNTIME DESTINATION bin

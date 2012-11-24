@@ -8,6 +8,9 @@
 #include <errno.h>
 #include <cstdio>
 #include <sys/wait.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sstream>
 using namespace std;
 
 
@@ -49,11 +52,51 @@ loggingMode(_loggingMode)
 	if(verbose && !loggingMode)
 		cerr << "SolverManager: Using performance mode" << endl;
 
+	//Setup up semaphore
+	solverSynchronisingSemaphore=NULL;
+	stringstream s;
+	s << "/nsolv-sem-" << time(NULL); //pick a unique name for the semaphore
+	solverSyncName=s.str();
+	solverSynchronisingSemaphore=sem_open(solverSyncName.c_str(),
+			O_CREAT | //Create a new semaphore if it doesn't already exist
+			O_EXCL | //Only allow exclusive access (i.e. with O_CREAT means that we can only create a new semaphore)
+			O_CLOEXEC, //Close semaphore on exec() call
+			S_IRWXU,
+			0U);
+
+	if(solverSynchronisingSemaphore==SEM_FAILED)
+	{
+		cerr << "SolverManager: Failed to create semaphore for synchronisation" << endl;
+		perror(NULL);
+	}
+	else
+		if(verbose) cerr << "SolverManger: Created named semaphore \"" << solverSyncName << "\"" << endl;
+
 
 }
 
 SolverManager::~SolverManager()
 {
+	//clean up the semaphore
+
+	if(sem_close(solverSynchronisingSemaphore)!=0)
+	{
+		cerr << "SolverManager: Failed to close semaphore" << endl;
+		perror(NULL);
+	}
+	else
+		if(verbose) cerr << "SolverManger: Closing semaphore \"" << solverSyncName << "\"" << endl;
+
+	//We assume that we are the parent process and so only the parent performs the unlink
+	if(sem_unlink(solverSyncName.c_str())!=0)
+	{
+		cerr << "SolverManager: Failed to unlink semaphore" << endl;
+		perror(NULL);
+	}
+	else
+		if(verbose) cerr << "SolverManger: Unlinking semaphore \"" << solverSyncName << "\"" << endl;
+
+
 	string solverName("");
 	//Try to delete all the solvers
 	for(map<pid_t,Solver*>::iterator i = pidToSolverMap.begin(); i != pidToSolverMap.end(); ++i)
@@ -129,6 +172,19 @@ bool SolverManager::invokeSolvers()
 		}
 		if(pid == 0)
 		{
+			//In child
+
+			if(verbose) cerr << "SolverManager: Solver \"" << (*s)->toString() << "\" blocking..." << endl;
+
+			/* We will now block (assuming our semaphores is initialised to zero)
+			 * until the NSolv parent process lets us go.
+			 */
+			if(sem_wait(solverSynchronisingSemaphore) !=0)
+			{
+				perror("Waiting for semaphore failed:");
+			}
+			if(verbose) cerr << "SolverManager: Solver \"" << (*s)->toString() << "\" unblocked..." << endl;
+
 			//Child code
 			(*s)->exec();
 		}
@@ -148,7 +204,12 @@ bool SolverManager::invokeSolvers()
 		}
 	}
 
-	//Parent code (wait for solvers)
+	/* (Parent). All the solvers have now been created. They should all be blocked on our semaphore.
+	 * We'll now release the semaphores in the hope that all the solvers will get a fair (depends on
+	 * your OS's scheduler) start.
+	 */
+	for(int numberOfSolvers=0; numberOfSolvers < solvers.size(); numberOfSolvers++)
+		sem_post(solverSynchronisingSemaphore);
 
 	//record the start time
 	if(clock_gettime(CLOCK_MONOTONIC,&startTime) == -1)
