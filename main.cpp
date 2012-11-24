@@ -27,6 +27,7 @@ namespace po = boost::program_options;
 #include <fstream>
 #include "SolverManager.h"
 #include <signal.h>
+#include <config.h>
 using namespace std;
 
 //Global store for variables
@@ -337,6 +338,7 @@ void printHelp(po::options_description& o)
 
 
 	cout << o << endl;
+	cout << "NSolv version " << NSOLV_VERSION << " built on "  __DATE__  << endl;
 	exit(0);
 }
 

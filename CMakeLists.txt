@@ -18,6 +18,11 @@
 cmake_minimum_required(VERSION 2.8)
 project(nsolv)
 
+#The Version numbering
+set (nsolv_VERSION_MAJOR 1)
+set (nsolv_VERSION_MINOR 0)
+set (nsolv_VERSION_STRING ${nsolv_VERSION_MAJOR}.${nsolv_VERSION_MINOR})
+
 set(EXEC_NAME ${CMAKE_PROJECT_NAME})
 
 # Set the possible values of build type for cmake-gui
@@ -37,8 +42,12 @@ endif()
 #Look for pthreads
 find_package(Threads REQUIRED)
 
-
+#List source files
 SET(NSOLV_SRC main.cpp SolverManager.cpp Solver.cpp)
+
+#Configure the configuration file.
+configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h @ONLY)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})
 
 add_executable(${EXEC_NAME} ${NSOLV_SRC})
 target_link_libraries(${EXEC_NAME} ${Boost_LIBRARIES} ${REALTIME_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
