@@ -302,7 +302,7 @@ void printHelp(po::options_description& o)
 			"mode the answer from the first solver to return (sat|unsat) is used and all other solvers are killed." << endl <<
 			"In logging mode the answer from the first solver to return (sat|unsat) is used but are solvers are allowed to " << endl <<
 			"finish (unless they timeout). The times and answers from the solvers are saved to a log file " << endl <<
-			"(see --logging-path)." << endl << endl <<
+			"(see --logging-path). If the log file already exists the times and answers are appended." << endl << endl <<
 
 			"CONFIGURATION FILE FORMAT" << endl <<
 			"Here is an example..." << endl << endl <<
