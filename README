@@ -79,7 +79,7 @@ NSolv supports using a configuration file which is the recommended way to use
 it. An example configuration file can be found in "config/example.cfg".
 
 REFERENCES
-[1] http://goedel.cs.uiowa.edu/smtlib/
+[1] http://www.smt-lib.org
 [2] https://github.com/delcypher/klee/tree/smtlib
 [3] http://klee.llvm.org/
 
