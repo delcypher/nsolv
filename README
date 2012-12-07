@@ -19,8 +19,10 @@ they timeout. The results and runtime of all solvers are recorded to a log file.
 NSolv is so named because it allows you to launch "N Solv(ers)".
 
 Its original purpose was to act as front-end to several SMTLIBv2 solvers for a
-modified version ([2]) of KLEE [3]. Hopefully the changes made to KLEE will be
-integrated at some point.
+modified version ([2]) of KLEE [3]. These changes made to KLEE will most likely
+never be merged as work is currently being done to integrate SMT-LIBv2 solvers
+via a library rather than executing an external application as is needed for 
+NSolv.
 
 BUILDING
 NSolv uses CMake as its build system. Here are a few commands you can run to get
